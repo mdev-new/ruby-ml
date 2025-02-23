@@ -1,6 +1,6 @@
 require 'yaml'
 require_relative 'activation_functions'
-
+require_relative 'loss_functions'
 
 class NeuralNetwork
   attr_reader :layers
@@ -48,23 +48,11 @@ class NeuralNetwork
 
   def backpropagate(input, output)
     output_layer = @layers.last
+    activation_derivative = ActivationFunctions[:"d#{output_layer.activation}"]
 
-    if @loss_function == :BinaryCrossEntropy
-      activation_derivative = ActivationFunctions[:"d#{output_layer.activation}"]
-      epsilon = 1e-12
-      output_layer.each_with_index do |neuron, i|
-        p = neuron.value
-        p = [[p, epsilon].max, 1 - epsilon].min  # clip p between epsilon and 1 - epsilon
-        grad_loss = - output[i] / p + (1 - output[i]) / (1 - p)
-        neuron.delta = grad_loss * activation_derivative.call(neuron.value)
-      end
-    else
-      # Default: using MSE
-      activation_derivative = ActivationFunctions[:"d#{output_layer.activation}"]
-      output_layer.each_with_index do |neuron, i|
-        error = neuron.value - output[i]  # assuming MSE cost function
-        neuron.delta = error * activation_derivative.call(neuron.value)
-      end
+    output_layer.each_with_index do |neuron, i|
+      grad_loss = LossFunctions[@loss_function].call(neuron.value, output[i])
+      neuron.delta = grad_loss * activation_derivative.call(neuron.value)
     end
 
     # Compute hidden layers' deltas (skip input layer)

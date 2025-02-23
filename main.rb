@@ -16,7 +16,7 @@ net = NeuralNetwork.new optimizer, layers, :BinaryCrossEntropy
 net.randomize
 
 # 1000 epochs
-for i in 0..5000
+for i in 0..10000
   #        A  B  A^B !A^B
   net.fit input[0], output[0]
   net.fit input[1], output[1]
@@ -31,7 +31,7 @@ end
 p (net.predict [1,0])[0].round 8
 p (net.predict [0,0])[0].round 8
 
-io = File.open('xor_model', 'wb')
+io = File.open('xor.model', 'wb')
 
 Marshal.dump(net, io)
 

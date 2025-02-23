@@ -2,7 +2,7 @@ require_relative 'neural_net'
 require_relative 'layers'
 require_relative 'optimizers'
 
-io = File.open('xor_model', 'rb')
+io = File.open('xor.model', 'rb')
 net = Marshal.load(io)
 io.close()
 
