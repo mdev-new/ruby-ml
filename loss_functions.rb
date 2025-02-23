@@ -1,0 +1,7 @@
+LossFunctions = {
+
+  :MSE => ->() {},
+  :BinaryCrossEntropy => ->() {},
+  # :BinaryCrossEntropy => ->() {}
+
+}
