@@ -2,17 +2,19 @@ require_relative 'neural_net'
 require_relative 'layers'
 require_relative 'optimizers'
 
+require 'parallel'
+
 input = [[0,0],[0,1],[1,0],[1,1]]
-output = [[0],[1],[1],[0]]
+output = [[1, 0],[0, 1],[0, 1],[1, 0]]
 
 optimizer = Optimizers::SGD.new 0.1
 layers = [
   Layers::Input.new([2]),
-  Layers::Dense.new(2, :Tanh),
-  Layers::Dense.new(1, :Sigmoid)
+  Layers::Dense.new(4, :ReLU),
+  Layers::Dense.new(2, :Softmax)
 ]
 
-net = NeuralNetwork.new optimizer, layers, :BinaryCrossEntropy
+net = NeuralNetwork.new optimizer, layers, :CategoricalCrossEntropy
 net.randomize
 
 def progress_bar(current, total, length = 20)
@@ -28,10 +30,9 @@ def progress_bar(current, total, length = 20)
 end
 
 epochs = 100000
-for i in 0..epochs
-  bar = progress_bar(i, epochs)
-
-  print "\r[#{bar}]"
+#Parallel.each(0..epochs, progress: true) do |i|
+(0..epochs).each do |i|
+  print "\r[", (progress_bar i, epochs), "]"
 
   net.fit input[0], output[0]
   net.fit input[1], output[1]
@@ -41,11 +42,10 @@ end
 
 print "\n"
 
-p (net.predict [1,0])[0].round 8
-p (net.predict [0,0])[0].round 8
+p1 = net.predict [1,0]
+p2 = net.predict [0,0]
 
-io = File.open('xor.model', 'wb')
+print p1, " ", p1.sum, "\n"
+print p2, " ", p2.sum, "\n"
 
-Marshal.dump(net, io)
-
-io.close()
+net.save 'xor.model'

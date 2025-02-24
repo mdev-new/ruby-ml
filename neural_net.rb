@@ -1,6 +1,7 @@
-require 'yaml'
-require_relative 'activation_functions'
+require_relative 'layers'
+require_relative 'optimizers'
 require_relative 'loss_functions'
+require_relative 'activation_functions'
 
 class NeuralNetwork
   attr_reader :layers
@@ -32,10 +33,16 @@ class NeuralNetwork
 
       activation_fn = ActivationFunctions[current.activation]
 
-      current.each do |neuron|
-        z = prev.zip(neuron.weights).map { |i, w| i.value * w }.sum + neuron.bias
-        neuron.value = activation_fn.call z
+      z_values = current.map do |neuron|
+        prev.zip(neuron.weights).map { |i, w| i.value * w }.sum + neuron.bias
       end
+
+      neuron_values = activation_fn.call z_values
+
+      current.map.with_index do |neuron, i|
+        neuron.value = neuron_values[i]
+      end
+
     end
   end
 
@@ -48,23 +55,39 @@ class NeuralNetwork
 
   def backpropagate(input, output)
     output_layer = @layers.last
-    activation_derivative = ActivationFunctions[:"d#{output_layer.activation}"]
+    output_vals = output_layer.map(&:value)
 
-    output_layer.each_with_index do |neuron, i|
-      grad_loss = LossFunctions[@loss_function].call(neuron.value, output[i])
-      neuron.delta = grad_loss * activation_derivative.call(neuron.value)
-    end
+    activation_derivative = ActivationFunctions[:"d#{output_layer.activation}"]
+    loss_fn = LossFunctions[@loss_function]
+
+    losses = output_layer.map.with_index { |neuron, i| loss_fn.call(neuron.value, output[i]) }
+
+    # Compute delta vector, using full Jacobian if activation is Softmax.
+    deltas =
+      if output_layer.activation == :Softmax
+        jacobian = ActivationFunctions[:dSoftmax].call(output_vals)
+        jacobian.map.with_index { |row, i| row.zip(losses).map { |a, b| a * b }.sum }
+      else
+        derivs = ActivationFunctions[:"d#{output_layer.activation}"].call(output_vals)
+        losses.zip(derivs).map { |loss, deriv| loss * deriv }
+      end
+
+    output_layer.each_with_index { |neuron, i| neuron.delta = deltas[i] }
 
     # Compute hidden layers' deltas (skip input layer)
     ((@layers.size - 2)).downto(1) do |layer_index|
       current_layer = @layers[layer_index]
+      current_vals = current_layer.map(&:value)
       next_layer = @layers[layer_index + 1]
       activation_derivative = ActivationFunctions[:"d#{current_layer.activation}"]
+
+      activation_derivatives = activation_derivative.call(current_vals)
+
       current_layer.each_with_index do |neuron, j|
         error = next_layer.inject(0.0) do |sum, next_neuron|
           sum + next_neuron.weights[j] * next_neuron.delta
         end
-        neuron.delta = error * activation_derivative.call(neuron.value)
+        neuron.delta = error * activation_derivatives[j]
       end
     end
 
@@ -87,35 +110,17 @@ class NeuralNetwork
     backpropagate(input, output)
   end
 
-  # Todo: Implement this
   def predict(input)
     feed_forward(input)
     @layers.last.map { |neuron| neuron.value }
   end
 
-
-  # Serialization stuff
-  def serialize
-    {
-      :layers => @layers.serialize,
-      :optimizer => @optimizer.serialize
-    }
+  def save filename
+    File.open(filename, "wb") { |io| Marshal.dump(self, io) }
   end
 
-  def save_yaml(filename)
-    File.write filename, (serialize).to_yaml
-  end
-
-  # Todo: Implement this
-  def self.deserialize(serialized)
-    layers = serialized[:layers]
-    optimizer = serialized[:optimizer]
-
-    NeuralNetwork.new layers, optimizer
-  end
-
-  # Todo: Implement this
-  def self.load_yaml(filename)
-    File.read filename
+  def self.load filename
+    io = File.open(filename, "rb")
+    return Marshal.load(io)
   end
 end
