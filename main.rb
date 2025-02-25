@@ -1,16 +1,14 @@
-require_relative 'neural_net'
-require_relative 'layers'
-require_relative 'optimizers'
-
 require 'parallel'
+require_relative 'lib/neural_net'
 
 input = [[0,0],[0,1],[1,0],[1,1]]
 output = [[1, 0],[0, 1],[0, 1],[1, 0]]
+# output = [[0],[1],[1],[0]]
 
 optimizer = Optimizers::SGD.new 0.1
 layers = [
   Layers::Input.new([2]),
-  Layers::Dense.new(4, :ReLU),
+  Layers::Dense.new(8, :LeakyReLU),
   Layers::Dense.new(2, :Softmax)
 ]
 
@@ -29,7 +27,7 @@ def progress_bar(current, total, length = 20)
   bar
 end
 
-epochs = 100000
+epochs = 3000
 #Parallel.each(0..epochs, progress: true) do |i|
 (0..epochs).each do |i|
   print "\r[", (progress_bar i, epochs), "]"

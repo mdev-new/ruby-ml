@@ -25,25 +25,18 @@ class NeuralNetwork
       fail "First layer must be an input layer"
     end
 
-    @layers.first.each_with_index do |neuron, i|
-      neuron.value = input[i]
+    @layers.each_with_index do |layer, index|
+
+      prev =
+        if index - 1 >= 0 then
+          @layers[index - 1].map &:value
+        else
+          input
+        end
+
+      layer.forward prev
     end
 
-    @layers.each_cons(2) do |prev, current|
-
-      activation_fn = ActivationFunctions[current.activation]
-
-      z_values = current.map do |neuron|
-        prev.zip(neuron.weights).map { |i, w| i.value * w }.sum + neuron.bias
-      end
-
-      neuron_values = activation_fn.call z_values
-
-      current.map.with_index do |neuron, i|
-        neuron.value = neuron_values[i]
-      end
-
-    end
   end
 
   # Todo: Implement this
@@ -57,10 +50,10 @@ class NeuralNetwork
     output_layer = @layers.last
     output_vals = output_layer.map(&:value)
 
-    activation_derivative = ActivationFunctions[:"d#{output_layer.activation}"]
     loss_fn = LossFunctions[@loss_function]
-
     losses = output_layer.map.with_index { |neuron, i| loss_fn.call(neuron.value, output[i]) }
+
+    activation_derivative = ActivationFunctions[:"d#{output_layer.activation}"]
 
     # Compute delta vector, using full Jacobian if activation is Softmax.
     deltas =

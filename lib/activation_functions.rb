@@ -2,6 +2,8 @@ ActivationFunctions = {
 
   :Tanh => ->(layer) { layer.map { |x| Math.tanh(x) } },
 
+  :LeakyReLU => ->(layer) { layer.map { |x| x < 0 ? 0.1 * x : x } },
+
   :ReLU => ->(layer) { layer.map { |x| [0, x].max } },
 
   :Sigmoid => ->(layer) { layer.map { |x| 1 / (1 + Math.exp(-x)) } },
@@ -15,7 +17,8 @@ ActivationFunctions = {
 
   # Derivatives
   :dReLU => ->(layer) { layer.map { |x| x >= 0 ? 1 : 0 } },
-  
+  :dLeakyReLU => ->(layer) { layer.map { |x| x < 0 ? 0.1 : 1 } },
+
   :dTanh => ->(layer) { layer.map { |x| 1 - Math.tanh(x) ** 2 } },
   
   :dSigmoid => ->(layer) {
