@@ -4,6 +4,8 @@ ActivationFunctions = {
 
   :LeakyReLU => ->(layer) { layer.map { |x| x < 0 ? 0.1 * x : x } },
 
+  :ELU => ->(layer) { layer.map { |x| x < 0 ? Math.exp(x) - 1 : x } },
+
   :ReLU => ->(layer) { layer.map { |x| [0, x].max } },
 
   :Sigmoid => ->(layer) { layer.map { |x| 1 / (1 + Math.exp(-x)) } },
@@ -18,6 +20,7 @@ ActivationFunctions = {
   # Derivatives
   :dReLU => ->(layer) { layer.map { |x| x >= 0 ? 1 : 0 } },
   :dLeakyReLU => ->(layer) { layer.map { |x| x < 0 ? 0.1 : 1 } },
+  :dELU => ->(layer) { layer.map { |x| x < 0 ? Math.exp(x) : 1 } },
 
   :dTanh => ->(layer) { layer.map { |x| 1 - Math.tanh(x) ** 2 } },
   

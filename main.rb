@@ -1,20 +1,6 @@
 require 'parallel'
 require_relative 'lib/neural_net'
 
-input = [[0,0],[0,1],[1,0],[1,1]]
-output = [[1, 0],[0, 1],[0, 1],[1, 0]]
-# output = [[0],[1],[1],[0]]
-
-optimizer = Optimizers::SGD.new 0.1
-layers = [
-  Layers::Input.new([2]),
-  Layers::Dense.new(8, :LeakyReLU),
-  Layers::Dense.new(2, :Softmax)
-]
-
-net = NeuralNetwork.new optimizer, layers, :CategoricalCrossEntropy
-net.randomize
-
 def progress_bar(current, total, length = 20)
   percent = (current.to_f / total) * 100
   progress = ((current.to_f / total) * length).to_i
@@ -28,9 +14,23 @@ def progress_bar(current, total, length = 20)
 end
 
 epochs = 3000
+input = [[0,0],[0,1],[1,0],[1,1]]
+output = [[1, 0],[0, 1],[0, 1],[1, 0]]
+# output = [[0],[1],[1],[0]]
+
+optimizer = Optimizers::SGD.new 0.1
+layers = [
+  Layers::Input.new([2]),
+  Layers::Dense.new(8, :ELU),
+  Layers::Dense.new(2, :Softmax)
+]
+
+net = NeuralNetwork.new optimizer, layers, :CategoricalCrossEntropy
+net.randomize
+
 #Parallel.each(0..epochs, progress: true) do |i|
 (0..epochs).each do |i|
-  print "\r[", (progress_bar i, epochs), "]"
+  print "\r[", (progress_bar i, epochs, 37), "]"
 
   net.fit input[0], output[0]
   net.fit input[1], output[1]
@@ -40,10 +40,9 @@ end
 
 print "\n"
 
-p1 = net.predict [1,0]
-p2 = net.predict [0,0]
-
-print p1, " ", p1.sum, "\n"
-print p2, " ", p2.sum, "\n"
+input.each_with_index do |inp, idx|
+  p = (net.predict inp).map { |i| i.round 2 }
+  puts "#{inp} -> #{output[idx]} : #{p} sum=#{p.sum} #{(p == output[idx] && p.sum == 1) ? '✓' : '✗'}"
+end
 
 net.save 'xor.model'
