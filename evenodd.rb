@@ -1,12 +1,11 @@
-require 'parallel'
 require_relative 'lib/neural_net'
 
-def progress_bar(current, total, length = 20, start_time = nil)
+def progress_bar(current, total, length = 20, start_time = nil, addition_text = "")
   percent = (current.to_f / total) * 100
   progress = ((current.to_f / total) * length).to_i
 
   bar = "=" * progress + " " * (length - progress)
-  percent_str = "#{percent.round(1)}%"
+  percent_str = "#{(current != total) ? percent.round(2) : percent.round(1)}%"
   start_index = [(length - percent_str.length) / 2, 0].max
   bar[start_index, percent_str.length] = percent_str
 
@@ -20,7 +19,7 @@ def progress_bar(current, total, length = 20, start_time = nil)
   end
 
   # Return the bar and the ETA separately so the ETA can be displayed after the bar.
-  "[#{bar}] #{eta_str}"
+  "[#{bar}] #{eta_str} #{addition_text}"
 end
 
 def decompose_to_binary_array(num, size)
@@ -45,7 +44,7 @@ numbers = 1000
   output.append([(k % 2 == 0) ? 1 : 0])
 end
 
-epochs = 10
+epochs = 1000
 
 optimizer = Optimizers::SGD.new 0.1
 layers = [
@@ -59,14 +58,13 @@ net.randomize
 
 start = Time.now
 
-# Parallel.each(0..epochs, progress: true) do |i|
+max_val_loss_lines = 10
+val_loss_line = 0
+
 (0..epochs).each do |i|
 
-  print "\r\e[2KTotal: ", (progress_bar i, epochs, 35, start), "\n"
-
-  start_local = Time.now
   (0..(input.length - 1)).each do |j|
-    print "\r\e[2KEpoch: ", (progress_bar j, input.length - 1, 35, start_local)
+    print "\r\e[2K", (progress_bar (i * epochs + j), (epochs * input.length), 35, start, "Epoch: #{i}")
 
     net.fit input[j], output[j]
   end
@@ -74,27 +72,32 @@ start = Time.now
   number = rand(2000..64000)
   loss = net.validate decompose_to_binary_array(number, 16), [(number % 2 == 0) ? 1 : 0]  
 
-  print "\n\e[#{i}B"
-  puts "\rValidation loss: #{loss}\n"
-  print "\e[#{[i, 1].max + 3}A"
+  val_loss_line = (val_loss_line + 1) % max_val_loss_lines
+
+  print "\e[#{val_loss_line}B\rValidation loss: #{loss}\e[#{val_loss_line}A"
 
 end
 
-print "\e[#{epochs}B\n"
+print "\e[#{max_val_loss_lines}B\n"
+net.save 'evenodd.model'
 
-# input.each_with_index do |inp, idx|
-#   p = (net.predict inp).map { |i| i.round 2 }
+test_count = 20
 
-#   if layers[-1].activation == :Softmax
-#     puts "#{inp} -> #{output[idx]} : #{p} ∑=#{p.sum} #{(p == output[idx] && p.sum == 1) ? '✓' : '✗'}"
-#   else
-#     puts "#{inp} -> #{output[idx]} : #{p} #{p == output[idx] ? '✓' : '✗'}"
-#   end
+(0..test_count).each_with_index do |inp, idx|
 
-#   # puts net.validate [1, 1], [1, 0]
+  number = rand(2000..64000)
+  inp = decompose_to_binary_array(number, 16)
+  outp = [(number % 2 == 0) ? 1 : 0]
 
-# end
+  pred = net.predict inp
+
+  if layers[-1].activation == :Softmax
+    puts "#{outp} : #{pred} ∑=#{p.sum} #{(p == output[idx] && p.sum == 1) ? '✓' : '✗'}"
+  else
+    puts "#{outp} : #{pred} #{pred == outp ? '✓' : '✗'}"
+  end
+
+end
 
 # p (net.predict [1, 1]).map { |i| i.round 2 }
 
-net.save 'evenodd.model'
