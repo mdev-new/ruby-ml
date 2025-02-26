@@ -47,10 +47,10 @@ module Layers
 
     def forward(input, training: true)
       return input unless training
+      scale = (1.0 / (1 - @rate))
 
       # Create dropout mask and scale the kept units
       mask = input.map { rand > @rate ? 1.0 : 0.0 }
-      scale = (1.0 / (1 - @rate))
       input.zip(mask).map { |val, m| val * m * scale }
     end
   end

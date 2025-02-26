@@ -39,13 +39,6 @@ class NeuralNetwork
 
   end
 
-  # Todo: Implement this
-  def validate(input, output)
-    predictions = predict(input)
-    error = predictions.zip(output).map { |p, o| (p - o)**2 }.sum / predictions.size.to_f
-    puts "Validation error: #{error}"
-  end
-
   def backpropagate(input, output)
     output_layer = @layers.last
     output_vals = output_layer.map(&:value)
@@ -58,8 +51,8 @@ class NeuralNetwork
     # Compute delta vector, using full Jacobian if activation is Softmax.
     deltas =
       if output_layer.activation == :Softmax
-        jacobian = ActivationFunctions[:dSoftmax].call(output_vals)
-        jacobian.map.with_index { |row, i| row.zip(losses).map { |a, b| a * b }.sum }
+        jacobian = activation_derivative.call(output_vals)
+        jacobian.map { |row| row.zip(losses).map { |a, b| a * b }.sum }
       else
         derivs = ActivationFunctions[:"d#{output_layer.activation}"].call(output_vals)
         losses.zip(derivs).map { |loss, deriv| loss * deriv }
@@ -106,6 +99,13 @@ class NeuralNetwork
   def predict(input)
     feed_forward(input)
     @layers.last.map { |neuron| neuron.value }
+  end
+
+  def validate(input, output)
+    loss_fn = LossFunctions[@loss_function]
+    predictions = predict(input)
+    error = predictions.zip(output).map { |p, o| loss_fn.call(p, o) }.sum / predictions.size.to_f
+    error
   end
 
   def save filename
