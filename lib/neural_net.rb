@@ -43,18 +43,17 @@ class NeuralNetwork
     output_layer = @layers.last
     output_vals = output_layer.map(&:value)
 
-    loss_fn = LossFunctions[@loss_function]
-    losses = output_layer.map.with_index { |neuron, i| loss_fn.call(neuron.value, output[i]) }
+    losses = output_layer.map.with_index { |neuron, i| @loss_function.call(neuron.value, output[i]) }
 
-    activation_derivative = ActivationFunctions[:"d#{output_layer.activation}"]
+    activation_derivative = ActivationFunctions::Derivatives[output_layer.activation_fn]
 
-    # Compute delta vector, using full Jacobian if activation is Softmax.
+    # Compute delta vector, using full Jacobian if activation is Softmax or Sparsemax.
     deltas =
-      if output_layer.activation == :Softmax
+      if [ActivationFunctions::Softmax, ActivationFunctions::Sparsemax].include?(output_layer.activation_fn)
         jacobian = activation_derivative.call(output_vals)
         jacobian.map { |row| row.zip(losses).map { |a, b| a * b }.sum }
       else
-        derivs = ActivationFunctions[:"d#{output_layer.activation}"].call(output_vals)
+        derivs = activation_derivative.call(output_vals)
         losses.zip(derivs).map { |loss, deriv| loss * deriv }
       end
 
@@ -65,7 +64,7 @@ class NeuralNetwork
       current_layer = @layers[layer_index]
       current_vals = current_layer.map(&:value)
       next_layer = @layers[layer_index + 1]
-      activation_derivative = ActivationFunctions[:"d#{current_layer.activation}"]
+      activation_derivative = ActivationFunctions::Derivatives[output_layer.activation_fn]
 
       activation_derivatives = activation_derivative.call(current_vals)
 
@@ -102,9 +101,8 @@ class NeuralNetwork
   end
 
   def validate(input, output)
-    loss_fn = LossFunctions[@loss_function]
     predictions = predict(input)
-    error = predictions.zip(output).map { |p, o| loss_fn.call(p, o) }.sum / predictions.size.to_f
+    error = predictions.zip(output).map { |p, o| @loss_function.call(p, o) }.sum / predictions.size.to_f
     error
   end
 

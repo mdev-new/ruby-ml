@@ -4,8 +4,8 @@ net = NeuralNetwork.load 'evenodd.model'
 
 def decompose_to_binary_array(num, size)
   binary_array = Array.new(size, 0)
-  
-  16.times do |i|
+
+  size.times do |i|
     binary_array[i] = (num >> i) & 1
   end
   
@@ -21,5 +21,5 @@ test_count = 20
 
   pred = (net.predict inp).map {|e| e.round(1) }
 
-  puts "#{outp} : #{pred} #{pred == outp ? '✓' : '✗'}"
+  puts "#{"#{number}".ljust 7} : #{pred[0] == 1.0 ? '✓' : '✗'} #{pred == outp ? '✓' : '✗'}"
 end

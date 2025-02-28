@@ -18,21 +18,19 @@ module Layers
   end
 
   class Dense < Array
-    attr_reader :activation
+    attr_reader :activation_fn
 
-    def initialize(size, activation = :Linear)
+    def initialize(size, activation_fn = ActivationFunctions::Linear)
       super(size) { Neuron.new }
-      @activation = activation
+      @activation_fn = activation_fn
     end
 
     def forward input
-      activation_fn = ActivationFunctions[@activation]
-
       z_values = self.map do |neuron|
         input.zip(neuron.weights).map { |i, w| i * w }.sum + neuron.bias
       end
 
-      neuron_values = activation_fn.call z_values
+      neuron_values = @activation_fn.call z_values
 
       self.each_with_index do |neuron, i|
         neuron.value = neuron_values[i]
